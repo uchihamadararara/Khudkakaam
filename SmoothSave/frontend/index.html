@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f8fa">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SmoothSave">
+<link rel="manifest" href="/manifest.json">
+<title>SmoothSave</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#111;--muted:#737983;--line:#e6e8ec;--accent:#111;--shadow:0 8px 30px #0000000c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}
+.app{max-width:520px;margin:auto;min-height:100dvh;padding:18px 18px 92px}
+.top{padding:8px 4px 18px}.brand{font-size:26px;font-weight:800;letter-spacing:-.8px}.sub{font-size:13px;color:var(--muted);margin-top:4px}
+.tabs{display:flex;background:#fff;border:1px solid var(--line);border-radius:15px;padding:4px;box-shadow:var(--shadow);margin-bottom:12px}
+.tab{flex:1;border:0;background:transparent;border-radius:11px;padding:11px;font-weight:650;color:#666}.tab.active{background:#f1f2f4;color:#111;box-shadow:0 2px 7px #0000000c}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow);margin-bottom:12px}
+.inputrow{display:flex;align-items:center;gap:8px;background:#f5f6f8;border:1px solid var(--line);border-radius:13px;padding:4px 5px 4px 12px}
+input{width:100%;border:0;outline:0;background:transparent;font-size:15px;padding:10px 0;color:#111}
+.paste{border:0;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-weight:650}
+.primary{width:100%;border:0;background:#111;color:white;border-radius:13px;padding:13px;font-size:15px;font-weight:750;margin-top:10px}.primary:disabled{opacity:.45}
+.preview{display:none;gap:12px;align-items:center}.preview.show{display:flex}.thumb{width:104px;height:70px;border-radius:11px;object-fit:cover;background:#eee}.title{font-weight:750;font-size:14px;line-height:1.25}.meta{font-size:12px;color:var(--muted);margin-top:5px}
+.label{font-size:13px;font-weight:750;margin:15px 0 8px}.choices{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.choice{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 5px;font-weight:650}.choice.active{background:#111;color:#fff;border-color:#111}
+.format{grid-template-columns:1fr 1fr}.format .choice{padding:12px}
+.status{text-align:center;color:var(--muted);font-size:12px;min-height:18px;margin:8px}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#ffffffee;backdrop-filter:blur(18px);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:5}.navin{width:min(520px,100%);display:flex;justify-content:space-around;padding:10px 0 calc(10px + env(safe-area-inset-bottom))}.navitem{font-size:11px;color:#777;text-align:center}.navitem b{display:block;font-size:18px;color:#111;margin-bottom:2px}
+.note{font-size:11px;color:#8a8f97;text-align:center;line-height:1.4;margin-top:15px}
+@media(min-width:700px){.app{padding-top:35px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top"><div class="brand">SmoothSave</div><div class="sub">Simple. Fast. Beautiful.</div></header>
+
+  <div class="tabs"><button class="tab active">YouTube</button><button class="tab">Instagram</button></div>
+
+  <section class="card">
+    <div class="inputrow">
+      <input id="url" type="url" autocomplete="off" placeholder="Paste video link here...">
+      <button class="paste" id="paste">Paste</button>
+    </div>
+    <button class="primary" id="analyze">Analyze</button>
+  </section>
+
+  <section class="card preview" id="preview">
+    <img class="thumb" id="thumb" alt="">
+    <div><div class="title" id="title"></div><div class="meta" id="meta"></div></div>
+  </section>
+
+  <section class="card" id="options" style="display:none">
+    <div class="label">Format</div>
+    <div class="choices format">
+      <button class="choice active" data-type="mp4">MP4 · Video</button>
+      <button class="choice" data-type="mp3">MP3 · Audio</button>
+    </div>
+
+    <div class="label" id="qualityLabel">Quality</div>
+    <div class="choices" id="qualities"></div>
+
+    <button class="primary" id="download">Download</button>
+  </section>
+
+  <div class="status" id="status"></div>
+  <div class="note">For content you own or are authorized to download.</div>
+</main>
+
+<nav class="nav"><div class="navin">
+  <div class="navitem"><b>⌂</b>Home</div>
+  <div class="navitem"><b>↓</b>Downloads</div>
+  <div class="navitem"><b>⚙</b>Settings</div>
+</div></nav>
+
+<script>
+const $=id=>document.getElementById(id);
+let selectedType="mp4", selectedQuality="best", infoData=null;
+
+async function paste(){
+  try{$("url").value=await navigator.clipboard.readText()}catch{ $("url").focus() }
+}
+$("paste").onclick=paste;
+
+document.querySelectorAll(".format .choice").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".format .choice").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active"); selectedType=b.dataset.type;
+  $("qualityLabel").style.display=selectedType==="mp3"?"none":"block";
+  $("qualities").style.display=selectedType==="mp3"?"none":"grid";
+});
+
+$("analyze").onclick=async()=>{
+  const url=$("url").value.trim();
+  if(!url){$("status").textContent="Paste a video link first.";return}
+  $("status").textContent="Analyzing...";
+  $("analyze").disabled=true;
+  try{
+    const r=await fetch("/api/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
+    const d=await r.json(); if(!r.ok) throw Error(d.error||"Could not analyze");
+    infoData=d;
+    $("thumb").src=d.thumbnail||"";
+    $("title").textContent=d.title||"Video";
+    $("meta").textContent=d.uploader||"";
+    $("preview").classList.add("show");
+    const qs=d.qualities||[1080,720,480,360];
+    $("qualities").innerHTML=qs.map((q,i)=>`<button class="choice ${i===0?"active":""}" data-q="${q}">${q}p</button>`).join("");
+    selectedQuality=qs[0]||"best";
+    document.querySelectorAll("#qualities .choice").forEach(b=>b.onclick=()=>{
+      document.querySelectorAll("#qualities .choice").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active"); selectedQuality=b.dataset.q;
+    });
+    $("options").style.display="block"; $("status").textContent="";
+  }catch(e){$("status").textContent=e.message}
+  $("analyze").disabled=false;
+};
+
+$("download").onclick=async()=>{
+  if(!infoData)return;
+  $("status").textContent="Preparing download...";
+  $("download").disabled=true;
+  try{
+    const r=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({url:$("url").value.trim(),type:selectedType,quality:selectedQuality})});
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||"Download failed")}
+    const blob=await r.blob();
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=(infoData.title||"video")+(selectedType==="mp3"?".mp3":".mp4");
+    document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(a.href); $("status").textContent="Download started ✓";
+  }catch(e){$("status").textContent=e.message}
+  $("download").disabled=false;
+};
+
+if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
+</script>
+</body>
+</html>
